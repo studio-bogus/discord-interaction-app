@@ -1,0 +1,50 @@
+{
+  "name": "@studio-bogus/discord-interaction-app",
+  "version": "1.0.0",
+  "description": "Mini framework for creating a discord interaction application. Designed to work with cloudflare service workers.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "release": "release-it",
+    "prettier": "prettier --write ./src"
+  },
+  "keywords": [],
+  "author": "Gavenda <gavenda@disroot.org>",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "dist/index.d.ts": [
+        "dist/index.d.ts"
+      ],
+      "*": [
+        "dist/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20230404.0",
+    "@tsconfig/node18": "2.0.0",
+    "@types/uuid": "9.0.1",
+    "prettier": "2.8.8",
+    "release-it": "15.10.2",
+    "rimraf": "5.0.0",
+    "typescript": "5.0.4"
+  },
+  "dependencies": {
+    "@studio-bogus/discord-interaction-client": "^1.0.1",
+    "@studio-bogus/logging": "^1.0.2",
+    "discord-api-types": "0.37.41",
+    "discord-interactions": "3.3.0",
+    "uuid": "9.0.0"
+  }
+}

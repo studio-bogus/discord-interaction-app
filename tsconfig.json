@@ -1,0 +1,21 @@
+{
+  "extends": "@tsconfig/node18/tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"module": "es2022",
+		"target": "es2022",
+		"lib": ["es2022"],
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"strict": true,
+		"alwaysStrict": true,
+		"declaration": true,
+		"preserveConstEnums": true,
+		"esModuleInterop": true,
+		"moduleResolution": "node16",
+		"sourceMap": true,
+		"types": ["@cloudflare/workers-types"]
+	},
+	"include": ["src"],
+	"exclude": ["node_modules", "dist"]
+}
