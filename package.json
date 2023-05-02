@@ -29,6 +29,7 @@
   },
   "exports": {
     ".": "./dist/index.js",
+    "./context": "./dist/context/index.js",
     "./*": "./dist/*"
   },
   "devDependencies": {
