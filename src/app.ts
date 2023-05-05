@@ -137,7 +137,7 @@ export class App {
   /**
    * Logger instance.
    */
-  logger: Logger;
+  #logger: Logger;
 
   constructor(options: AppOptions) {
     this.#environment = options.environment;
@@ -149,7 +149,7 @@ export class App {
     this.componentCache = new DefaultCache();
     this.messageCache = new DefaultCache();
     this.#client = new Client().setToken(options.token);
-    this.logger =
+    this.#logger =
       options.logger ??
       new Logger({
         transports: [new ConsoleTransport()],
@@ -179,6 +179,13 @@ export class App {
    */
   get client(): Client {
     return this.#client;
+  }
+
+  /**
+   * Returns logger instance.
+   */
+  get logger(): Logger {
+    return this.#logger;
   }
 
   /**
