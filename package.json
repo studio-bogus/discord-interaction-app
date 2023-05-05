@@ -1,6 +1,6 @@
 {
   "name": "@studio-bogus/discord-interaction-app",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Mini framework for creating a discord interaction application. Designed to work with cloudflare service workers.",
   "type": "module",
   "scripts": {
