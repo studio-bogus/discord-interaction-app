@@ -27,6 +27,9 @@ import { SlashCommandContext } from './context/slash-command-context.js';
 import { UserCommandContext } from './context/user-command-context.js';
 import { sleep } from './time.js';
 
+/**
+ * A map of command handlers.
+ */
 export interface CommandMap {
   [name: string]: CommandHandler<ApplicationCommandContext>;
 }
@@ -76,28 +79,35 @@ export interface AppOptions {
    * Component cache ttl, defaults to 86400
    */
   componentTtl?: number;
+  /**
+   * Optional provided logger.
+   */
+  logger?: Logger;
 }
 
 /**
  * Discord cloudflare service worker application.
  */
 export class App {
-  private environment: any;
-  private commandMap: CommandMap = {};
+  /**
+   * Attached environment object.
+   */
+  #environment: any;
+
+  /**
+   * Application command map.
+   */
+  #commandMap: CommandMap = {};
 
   /**
    * Application public key.
    */
-  publicKey: string;
+  #publicKey: string;
+
   /**
    * Application identifier.
    */
   id: string;
-
-  /**
-   * Application token.
-   */
-  token: string;
 
   /**
    * The cloudflare service worker execution context.
@@ -107,12 +117,12 @@ export class App {
   /**
    * The number in milliseconds before any interaction is deemed timed out.
    */
-  timeoutMs: number;
+  #timeoutMs: number;
 
   /**
    * Application REST client.
    */
-  rest: Client;
+  #client: Client;
 
   /**
    * Component cache.
@@ -130,23 +140,24 @@ export class App {
   logger: Logger;
 
   constructor(options: AppOptions) {
-    this.environment = options.environment;
+    this.#environment = options.environment;
     this.id = options.id;
-    this.token = options.token;
-    this.publicKey = options.publicKey;
+    this.#publicKey = options.publicKey;
     this.executionContext = options.executionContext;
-    this.commandMap = options.commands;
-    this.timeoutMs = options.timeoutMs ?? 20000;
+    this.#commandMap = options.commands;
+    this.#timeoutMs = options.timeoutMs ?? 20000;
     this.componentCache = new DefaultCache();
     this.messageCache = new DefaultCache();
-    this.rest = new Client().setToken(options.token);
-    this.logger = new Logger({
-      transports: [new ConsoleTransport()],
-    });
+    this.#client = new Client().setToken(options.token);
+    this.logger =
+      options.logger ??
+      new Logger({
+        transports: [new ConsoleTransport()],
+      });
 
     if (options.bucketNamespace) {
       const bucketManager = new KVBucketManager(options.bucketNamespace);
-      this.rest = new Client({ bucketManager }).setToken(options.token);
+      this.#client = new Client({ bucketManager }).setToken(options.token);
     }
 
     if (options.cacheNamespace) {
@@ -160,7 +171,14 @@ export class App {
    * @returns
    */
   env<T>() {
-    return this.environment as T;
+    return this.#environment as T;
+  }
+
+  /**
+   * Returns the rest client.
+   */
+  get client(): Client {
+    return this.#client;
   }
 
   /**
@@ -181,7 +199,7 @@ export class App {
     }
 
     const body = await request.clone().arrayBuffer();
-    const requestValid = verifyKey(body, signature, timestamp, this.publicKey);
+    const requestValid = verifyKey(body, signature, timestamp, this.#publicKey);
 
     if (!requestValid) {
       return new Response('Bad request signature.', { status: 401 });
@@ -189,7 +207,7 @@ export class App {
 
     const interaction = await request.json<APIInteraction>();
     // This should return almost immediately
-    const interactionResponse = await this.handleInteraction(interaction);
+    const interactionResponse = await this.#handleInteraction(interaction);
 
     return new Response(JSON.stringify(interactionResponse), {
       headers: {
@@ -198,7 +216,7 @@ export class App {
     });
   }
 
-  async handleInteraction(interaction: APIInteraction): Promise<APIInteractionResponse> {
+  async #handleInteraction(interaction: APIInteraction): Promise<APIInteractionResponse> {
     if (interaction.type === InteractionType.Ping) {
       // The `Ping` message is used during the initial webhook handshake, and is
       // required to configure the webhook in the developer portal.
@@ -206,16 +224,16 @@ export class App {
     }
 
     if (interaction.type === InteractionType.MessageComponent) {
-      return this.handleMessageComponentInteraction(interaction);
+      return this.#handleMessageComponentInteraction(interaction);
     }
     if (interaction.type === InteractionType.ModalSubmit) {
-      return this.handleModalSubmitInteraction(interaction);
+      return this.#handleModalSubmitInteraction(interaction);
     }
     if (interaction.type === InteractionType.ApplicationCommand) {
-      return this.handleApplicationCommand(interaction);
+      return this.#handleApplicationCommand(interaction);
     }
     if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
-      return this.handleApplicationCommandAutocomplete(interaction);
+      return this.#handleApplicationCommandAutocomplete(interaction);
     }
 
     // It is impossible to have another interaction type, we shouldn't go here at all
@@ -233,7 +251,7 @@ export class App {
    * @param interaction
    * @returns
    */
-  async handleModalSubmitInteraction(interaction: APIModalSubmitInteraction): Promise<APIInteractionResponse> {
+  async #handleModalSubmitInteraction(interaction: APIModalSubmitInteraction): Promise<APIInteractionResponse> {
     return {
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
@@ -248,10 +266,10 @@ export class App {
    * @param interaction
    * @returns
    */
-  async handleMessageComponentInteraction(interaction: APIMessageComponentInteraction): Promise<APIInteractionResponse> {
+  async #handleMessageComponentInteraction(interaction: APIMessageComponentInteraction): Promise<APIInteractionResponse> {
     const context = new ComponentContext(this, interaction);
     // Lookup handler for command
-    const handler = this.commandMap[context.command];
+    const handler = this.#commandMap[context.command];
 
     if (!handler) {
       return {
@@ -265,7 +283,7 @@ export class App {
 
     // Timeout the interaction if it passes than given timeout
     const timeout = new Promise<void>(async (resolve, _) => {
-      await sleep(this.timeoutMs);
+      await sleep(this.#timeoutMs);
       // We send a message if not handled
       if (!context.handled) {
         await context.edit({
@@ -318,7 +336,7 @@ export class App {
    * @param interaction
    * @returns
    */
-  async handleApplicationCommand(interaction: APIApplicationCommandInteraction): Promise<APIInteractionResponse> {
+  async #handleApplicationCommand(interaction: APIApplicationCommandInteraction): Promise<APIInteractionResponse> {
     const initialResponse: Required<APIInteractionResponse> = {
       type: InteractionResponseType.DeferredChannelMessageWithSource,
       data: {},
@@ -331,15 +349,15 @@ export class App {
     switch (interaction.data.type) {
       case ApplicationCommandType.ChatInput:
         context = new SlashCommandContext(this, interaction as APIChatInputApplicationCommandInteraction);
-        handler = this.commandMap[interaction.data.name];
+        handler = this.#commandMap[interaction.data.name];
         break;
       case ApplicationCommandType.Message:
         context = new MessageCommandContext(this, interaction as APIMessageApplicationCommandInteraction);
-        handler = this.commandMap[interaction.data.name];
+        handler = this.#commandMap[interaction.data.name];
         break;
       case ApplicationCommandType.User:
         context = new UserCommandContext(this, interaction as APIUserApplicationCommandInteraction);
-        handler = this.commandMap[interaction.data.name];
+        handler = this.#commandMap[interaction.data.name];
         break;
     }
 
@@ -362,7 +380,7 @@ export class App {
 
     // Timeout the interaction if it passes than given timeout
     const timeout = new Promise<void>(async (resolve, _) => {
-      await sleep(this.timeoutMs);
+      await sleep(this.#timeoutMs);
       // We send a message if not handled
       if (!context.handled) {
         this.logger.warn(`Interaction timed out`, { interaction });
@@ -402,8 +420,13 @@ export class App {
     return initialResponse;
   }
 
-  async handleApplicationCommandAutocomplete(interaction: APIApplicationCommandAutocompleteInteraction): Promise<APIInteractionResponse> {
-    const handler = this.commandMap[interaction.data.name];
+  /**
+   * Handles application autocomplete.
+   * @param interaction
+   * @returns
+   */
+  async #handleApplicationCommandAutocomplete(interaction: APIApplicationCommandAutocompleteInteraction): Promise<APIInteractionResponse> {
+    const handler = this.#commandMap[interaction.data.name];
     const context = new AutocompleteContext(this, interaction);
 
     let choices: APIApplicationCommandOptionChoice[] = [];

@@ -2,18 +2,18 @@ import { Client } from '@studio-bogus/discord-interaction-client';
 import { APIEmbed, APIMessage, MessageFlags, RESTPostAPIInteractionFollowupJSONBody, Routes, Snowflake } from 'discord-api-types/v10';
 import { MessageComponent } from 'discord-interactions';
 
-const toFollowUp = (message: string | APIEmbed[], components: any[], ephemeral: boolean): RESTPostAPIInteractionFollowupJSONBody => {
+const toFollowUp = (options: { message: string | APIEmbed[]; components: any[]; ephemeral: boolean }): RESTPostAPIInteractionFollowupJSONBody => {
   const body: RESTPostAPIInteractionFollowupJSONBody = {
-    components,
+    components: options.components,
   };
 
-  if (typeof message === 'string') {
-    body.content = message;
+  if (typeof options.message === 'string') {
+    body.content = options.message;
   } else {
-    body.embeds = message;
+    body.embeds = options.message;
   }
 
-  if (ephemeral) {
+  if (options.ephemeral) {
     body.flags = MessageFlags.Ephemeral;
   }
 
@@ -21,20 +21,24 @@ const toFollowUp = (message: string | APIEmbed[], components: any[], ephemeral: 
 };
 
 export class Webhook {
-  private id: Snowflake;
-  private token: string;
-  private rest: Client;
+  #id: Snowflake;
+  #token: string;
+  #rest: Client;
 
   constructor(client: Client, id: Snowflake, token: string, auth: boolean = false) {
-    this.id = id;
-    this.token = token;
-    this.rest = client;
+    this.#id = id;
+    this.#token = token;
+    this.#rest = client;
   }
 
   async followUp(options: { message: string | APIEmbed[]; components?: MessageComponent[]; ephemeral?: boolean; auth?: boolean }): Promise<APIMessage> {
-    return this.rest.post<APIMessage>(Routes.webhook(this.id, this.token), {
+    return this.#rest.post<APIMessage>(Routes.webhook(this.#id, this.#token), {
       auth: options.auth ?? false,
-      body: toFollowUp(options.message, options.components ?? [], options.ephemeral ?? false),
+      body: toFollowUp({
+        message: options.message,
+        components: options.components ?? [],
+        ephemeral: options.ephemeral ?? false,
+      }),
     });
   }
 
@@ -45,13 +49,17 @@ export class Webhook {
     ephemeral?: boolean;
     auth?: boolean;
   }): Promise<APIMessage> {
-    return this.rest.patch<APIMessage>(Routes.webhookMessage(this.id, this.token, options.messageId), {
+    return this.#rest.patch<APIMessage>(Routes.webhookMessage(this.#id, this.#token, options.messageId), {
       auth: options.auth ?? false,
-      body: toFollowUp(options.message, options.components ?? [], options.ephemeral ?? false),
+      body: toFollowUp({
+        message: options.message,
+        components: options.components ?? [],
+        ephemeral: options.ephemeral ?? false,
+      }),
     });
   }
 
   async delete(id: Snowflake): Promise<void> {
-    await this.rest.delete(Routes.webhookMessage(this.id, this.token, id), { auth: false });
+    await this.#rest.delete(Routes.webhookMessage(this.#id, this.#token, id), { auth: false });
   }
 }

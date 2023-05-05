@@ -1,4 +1,4 @@
-import { App } from'../app.js';
+import { App } from '../app.js';
 import { APIMessageComponentInteraction, ComponentType } from 'discord-api-types/v10';
 import { MessageComponent, MessageComponentTypes } from 'discord-interactions';
 import { v4 as uuidv4 } from 'uuid';

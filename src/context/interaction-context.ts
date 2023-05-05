@@ -37,7 +37,7 @@ export abstract class InteractionContext {
 
     this.guildId = interaction.guild_id;
 
-    this.webhook = new Webhook(this.app.rest, this.app.id, this.token);
+    this.webhook = new Webhook(this.app.client, this.app.id, this.token);
   }
 
   get messageKey(): string {
